@@ -1,0 +1,268 @@
+
+// Data Watchpoint and Trace unit
+// CYCCN is a CPU cycle counter
+sysbus:
+    init:
+        Tag <0xE0001004, 0xE0001008> "DWT_CYCCNT" 100
+
+cpu: CPU.CortexM @ sysbus
+    cpuType: "cortex-m33"
+    nvic: nvic
+
+// \src\Infrastructure\src\Emulator\Cores\Arm-M\NVIC.cs
+nvic: IRQControllers.NVIC @ sysbus 0xE000E000
+    priorityMask: 0xF0
+    // without any divider on the way the base clock is still divided by 8
+    systickFrequency: 16000000
+    IRQ -> cpu@0
+
+// rever e mudar futuramente para uma implementacao de U5
+// no U5 existem ainda lptim3 e lptim4 ... rever futuramente isso
+rcc: Miscellaneous.STM32WBA_RCC @ sysbus 0x46020C00
+    nvic: nvic
+    lptim1: lptim1
+    lptim2: lptim2
+//    lptim3: lptim3
+//    lptim4: lptim4
+
+sram: Memory.MappedMemory @ sysbus 0x20000000
+    size: 0x40000
+
+sram4: Memory.MappedMemory @ sysbus 0x28000000
+    size: 0x4000
+
+bkpsram: Memory.MappedMemory @ sysbus 0x40036400
+    size: 0x800
+
+flash: Memory.MappedMemory @ sysbus 0x08000000
+    size: 0x80000
+
+rom: Memory.MappedMemory @ sysbus 0x0BF90000
+    size: 0x8000
+
+flash_ctrl: MTD.STM32WBA_FlashController @ sysbus 0x40022000
+    flash: flash
+    // TODO: connect interrupt
+
+pwr: Miscellaneous.STM32WBA_PWR @ sysbus 0x46020800
+
+// precisa rever se essas uarts sao mesmo iguais ao do F7
+lpuart1: UART.STM32F7_USART @ sysbus 0x46002400
+    frequency: 160000000
+    lowPowerMode: true
+    IRQ -> nvic@66
+
+usart1: UART.STM32F7_USART @ sysbus 0x40013800
+    frequency: 160000000
+    IRQ -> nvic@61
+
+usart3: UART.STM32F7_USART @ sysbus  0x40004800
+    frequency: 160000000
+    IRQ -> nvic@63
+
+uart4: UART.STM32F7_USART @ sysbus 0x40004C00
+    frequency: 160000000
+    IRQ -> nvic@64
+
+uart5: UART.STM32F7_USART @ sysbus 0x40005000
+    frequency: 160000000
+    IRQ -> nvic@65
+
+spi1: SPI.STM32WBA_SPI @ sysbus 0x40013000
+    IRQ -> nvic@59
+
+spi2: SPI.STM32WBA_SPI @ sysbus 0x40003800
+    IRQ -> nvic@60
+
+spi3: SPI.STM32WBA_SPI @ sysbus 0x40002000
+    IRQ -> nvic@99
+
+// precisa ser revisto, numero diferente de interrupcoes
+exti: IRQControllers.STM32WBA_EXTI @ sysbus 0x46022000
+    numberOfOutputLines: 24
+    [0-15] -> nvic@[11-26]
+
+// precisa rever se eh igual mesmo
+i2c1: I2C.STM32F7_I2C @ sysbus 0x40005400
+    EventInterrupt -> nvic@55
+    ErrorInterrupt -> nvic@56
+
+i2c2: I2C.STM32F7_I2C @ sysbus 0x40005800
+    EventInterrupt -> nvic@57
+    ErrorInterrupt -> nvic@58
+
+i2c3: I2C.STM32F7_I2C @ sysbus 0x46002800
+    EventInterrupt -> nvic@88
+    ErrorInterrupt -> nvic@89
+
+i2c4: I2C.STM32F7_I2C @ sysbus 0x40008400
+    EventInterrupt -> nvic@100
+    ErrorInterrupt -> nvic@101
+
+adc1: Analog.STM32WBA_ADC @ sysbus 0x42028000
+    referenceVoltage: 3.0
+    externalEventFrequency: 1000
+    -> nvic@37
+
+adc4: Analog.STM32WBA_ADC @ sysbus 0x46021000
+    referenceVoltage: 3.0
+    externalEventFrequency: 1000
+    -> nvic@113
+
+gpioPortA: GPIOPort.STM32_GPIOPort @ sysbus <0x42020000, +0x400>
+    modeResetValue: 0xABFFFFFF
+    outputSpeedResetValue: 0x08000000
+    pullUpPullDownResetValue: 0x64000000
+    numberOfAFs: 16
+    [0-15] -> exti#0@[0-15]
+
+gpioPortB: GPIOPort.STM32_GPIOPort @ sysbus <0x42020400, +0x400>
+    modeResetValue: 0xFFFFFEBF
+    outputSpeedResetValue: 0x00000080
+    pullUpPullDownResetValue: 0x00000100
+    numberOfAFs: 16
+    [0-15] -> exti#1@[0-15]
+
+gpioPortC: GPIOPort.STM32_GPIOPort @ sysbus <0x42020800, +0x400>
+    modeResetValue: 0xFFFFFFFF
+    numberOfAFs: 16
+    [0-15] -> exti#2@[0-15]
+
+gpioPortD: GPIOPort.STM32_GPIOPort @ sysbus <0x42020C00, +0x400>
+    modeResetValue: 0xFFFFFFFF
+    numberOfAFs: 16
+    [0-15] -> exti#3@[0-15]
+
+gpioPortE: GPIOPort.STM32_GPIOPort @ sysbus <0x42021000, +0x400>
+    modeResetValue: 0xFFFFFFFF
+    numberOfAFs: 16
+    [0-15] -> exti#4@[0-15]
+
+gpioPortG: GPIOPort.STM32_GPIOPort @ sysbus <0x42021800, +0x400>
+    modeResetValue: 0xFFFFFFF0
+    numberOfAFs: 16
+    [0-15] -> exti#6@[0-15]
+
+gpioPortH: GPIOPort.STM32_GPIOPort @ sysbus <0x42021C00, +0x400>
+    modeResetValue: 0x000000CF
+    numberOfAFs: 16
+    [0-15] -> exti#7@[0-15]
+
+lptim1: Timers.STM32L0_LpTimer @ sysbus 0x46004400
+    frequency: 16000000
+    -> nvic@67
+
+lptim2: Timers.STM32L0_LpTimer @ sysbus 0x40009400
+    frequency: 16000000
+    -> nvic@68
+
+lptim3: Timers.STM32L0_LpTimer @ sysbus 0x46004800
+    frequency: 16000000
+    -> nvic@98
+
+lptim4: Timers.STM32L0_LpTimer @ sysbus 0x46004C00
+    frequency: 16000000
+    -> nvic@110
+
+// esse timer parece ser diferente, tem varias interrupcoes associadas
+// deixei a do update
+timer1: Timers.STM32_Timer @ sysbus 0x40012C00
+    initialLimit: 0xFFFF
+    frequency: 16000000
+    IRQ -> nvic@42
+
+timer2: Timers.STM32_Timer @ sysbus 0x40000000
+    initialLimit: 0xFFFF
+    frequency: 16000000
+    IRQ -> nvic@45
+
+timer3: Timers.STM32_Timer @ sysbus 0x40000400
+    initialLimit: 0xFFFF
+    frequency: 16000000
+    IRQ -> nvic@46
+
+timer4: Timers.STM32_Timer @ sysbus 0x40000800
+    initialLimit: 0xFFFF
+    frequency: 16000000
+    IRQ -> nvic@47
+
+timer5: Timers.STM32_Timer @ sysbus 0x40000C00
+    initialLimit: 0xFFFF
+    frequency: 16000000
+    IRQ -> nvic@48
+
+timer6: Timers.STM32_Timer @ sysbus 0x40001000
+    initialLimit: 0xFFFF
+    frequency: 16000000
+    IRQ -> nvic@49
+
+timer7: Timers.STM32_Timer @ sysbus 0x40001400
+    initialLimit: 0xFFFF
+    frequency: 16000000
+    IRQ -> nvic@50
+
+// esse timer parece ser diferente, tem varias interrupcoes associadas
+// deixei a do update
+timer8: Timers.STM32_Timer @ sysbus 0x40013400
+    initialLimit: 0xFFFF
+    frequency: 16000000
+    IRQ -> nvic@52
+
+timer15: Timers.STM32_Timer @ sysbus 0x40014000
+    initialLimit: 0xFFFF
+    frequency: 16000000
+    IRQ -> nvic@69
+
+timer16: Timers.STM32_Timer @ sysbus 0x40014400
+    initialLimit: 0xFFFF
+    frequency: 16000000
+    IRQ -> nvic@70
+
+timer17: Timers.STM32_Timer @ sysbus 0x40014800
+    initialLimit: 0xFFFF
+    frequency: 16000000
+    IRQ -> nvic@71
+
+iwdg: Timers.STM32_IndependentWatchdog @ sysbus 0x40003000
+    frequency: 32000
+    windowOption: true
+    defaultPrescaler: 0
+
+rtc: Timers.STM32F4_RTC @ sysbus 0x46007800
+
+/*
+
+
+#define APB1PERIPH_BASE_NS       0x40000000
+#define APB2PERIPH_BASE_NS       0x40010000
+#define AHB1PERIPH_BASE_NS       0x40020000
+#define AHB2PERIPH_BASE_NS       0x42020000
+#define APB3PERIPH_BASE_NS       0x46000000
+#define AHB3PERIPH_BASE_NS       0x46020000
+*/
+
+/*
+Missing
+=======
+
+COMP1
+DAC1
+OPAMP1
+VREFBUF
+TAMP
+FDCAN1
+IRTIM
+OCTOSPI2
+SDMMC1
+USB_DRD_FS
+SAI1
+GTZC
+HASH
+RNG
+ADF1
+CORDIC
+CRC
+FMAC
+MDF1
+
+*/
